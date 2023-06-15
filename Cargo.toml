@@ -4,7 +4,23 @@ version = "0.1.0"
 edition = "2021"
 exclude = [
     "target/",
-    "test_assets/"
+    "test_assets/",
+    ".idea/"
+]
+license = "APACHE LICENSE, VERSION 2.0"
+description = "Simple woff to otf file conversion in rust. Mostly a translation of https://github.com/hanikesn/woff2otf/"
+homepage = "https://github.com/tooxo/rs-woff"
+repository = "https://github.com/tooxo/rs-woff"
+documentation = "https://docs.rs/rs-woff"
+readme = ""
+keywords = [
+    "font",
+    "otf",
+    "woff",
+    "woff1"
+]
+categories = [
+    "font"
 ]
 
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
