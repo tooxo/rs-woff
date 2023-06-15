@@ -1,5 +1,3 @@
-extern crate core;
-
 use std::{io};
 use std::io::{Read, Seek, SeekFrom, Write};
 
@@ -74,21 +72,24 @@ pub fn woff2otf<I, O>(mut input: &mut I, output: &mut O) -> io::Result<()>
     write_u32_be(output, header.flavour)?;
     write_u16_be(output, header.num_tables)?;
 
-    let (entry_selector, search_range) = (0..64)
+    let (entry_selector, search_range) = (0..16)
         .map(
             |n| {
-                (n, u64::pow(2, n))
+                (n, u16::pow(2, n))
             }
         )
         .filter(
-            |x| x.1 <= header.num_tables as u64
+            |x| x.1 <= header.num_tables
+        )
+        .map(
+            |x| (x.0, x.1 * 16)
         )
         .last()
         .unwrap();
-    let search_range = search_range * 16;
-    write_u16_be(output, search_range as u16)?;
+
+    write_u16_be(output, search_range)?;
     write_u16_be(output, entry_selector as u16)?;
-    let range_shift = header.num_tables * 16 - search_range as u16;
+    let range_shift = header.num_tables * 16 - search_range;
     write_u16_be(output, range_shift)?;
 
     let mut offset = 4 + 2 + 2 + 2 + 2; // how many bytes have been written yet
@@ -110,13 +111,13 @@ pub fn woff2otf<I, O>(mut input: &mut I, output: &mut O) -> io::Result<()>
     };
 
     for table_directory_entry in &mut table_directory_entries {
-        write_u32_be(output, table_directory_entry.tag)?;
-        write_u32_be(output, table_directory_entry.orig_checksum)?;
-        write_u32_be(output, table_directory_entry.offset)?;
-        write_u32_be(output, table_directory_entry.orig_length)?;
-
         table_directory_entry.otf_offset = offset;
         offset += table_directory_entry.orig_length;
+
+        write_u32_be(output, table_directory_entry.tag)?;
+        write_u32_be(output, table_directory_entry.orig_checksum)?;
+        write_u32_be(output, table_directory_entry.otf_offset)?;
+        write_u32_be(output, table_directory_entry.orig_length)?;
 
         if offset % 4 != 0 {
             offset += 4 - (offset % 4);
@@ -156,10 +157,13 @@ pub fn woff2otf<I, O>(mut input: &mut I, output: &mut O) -> io::Result<()>
 
 #[test]
 fn test() {
-    let input = include_bytes!("../test_assets/fontawesome-webfont.woff");
+    let input = include_bytes!("../test_assets/OpenSans-Regular.woff");
     let output = Vec::new();
     let mut cursor_i = io::Cursor::new(input);
     let mut cursor_o = io::Cursor::new(output);
 
     woff2otf(&mut cursor_i, &mut cursor_o).unwrap();
+
+    let expected = include_bytes!("../test_assets/OpenSans.otf");
+    assert_eq!(expected, cursor_o.into_inner().as_slice());
 }
